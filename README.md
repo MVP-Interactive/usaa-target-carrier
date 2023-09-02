@@ -5,4 +5,13 @@ light strand along with 12V power.
 
 Because of the 12V power for the LEDs, the PoE on the ESP32-POE will not be used.
 
+https://www.adafruit.com/product/4634
+https://www.olimex.com/Products/IoT/ESP32/ESP32-POE-ISO/open-source-hardware
+
+https://www.amazon.com/gp/product/B01AG923EU/
+
+https://www.amazon.com/gp/product/B07L7QDZJW/
+
+https://www.amazon.com/dp/B01DC0KIT2
+
 
