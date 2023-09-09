@@ -28,8 +28,10 @@ fp-info-cache
 *.xml
 *.csv
 
-*~
+# Emacs
+~*
 \#*
 
+# Other
 ~*lck
 
