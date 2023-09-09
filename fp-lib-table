@@ -2,5 +2,5 @@
   (version 7)
   (lib (name "SnapEDA")(type "KiCad")(uri "${KIPRJMOD}/SnapEDA")(options "")(descr ""))
   (lib (name "Library")(type "KiCad")(uri "${KIPRJMOD}/Library.pretty")(options "")(descr ""))
-  (lib (name "EasyEDA Library")(type "KiCad")(uri "${KIPRJMOD}/EasyEDA_Footprints.pretty")(options "")(descr ""))
+  (lib (name "EasyEDA_Footprints")(type "KiCad")(uri "${KIPRJMOD}/EasyEDA_Footprints.pretty")(options "")(descr ""))
 )
