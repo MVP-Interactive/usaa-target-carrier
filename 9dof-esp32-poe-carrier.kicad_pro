@@ -167,7 +167,7 @@
       ],
       "track_widths": [],
       "via_dimensions": [],
-      "zones_allow_external_fillets": false
+      "zones_allow_external_fillets": true
     },
     "layer_presets": [],
     "viewports": []
