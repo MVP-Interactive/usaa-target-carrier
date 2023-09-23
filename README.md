@@ -15,3 +15,8 @@ https://www.amazon.com/gp/product/B07L7QDZJW/
 https://www.amazon.com/dp/B01DC0KIT2
 
 
+## LED strand pinout
+
+1 - 12v   - RED
+2 - DINv5 - WHITE
+3 - GND   - BLUE
