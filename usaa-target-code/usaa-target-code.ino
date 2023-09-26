@@ -16,7 +16,7 @@
 #include <esp_task_wdt.h>
 
 
-#define WDT_TIMEOUT 3  // define a 3 seconds WDT (Watch Dog Timer)
+#define WDT_TIMEOUT 120  // define a 3 seconds WDT (Watch Dog Timer)
 int BootReason = 99;
 
 enum LedState {
