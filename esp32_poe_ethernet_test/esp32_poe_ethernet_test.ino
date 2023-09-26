@@ -70,8 +70,7 @@ void testClient(const char* host, uint16_t port) {
   }
 }
 
-void setup() {
-  Serial.begin(115200);
+void setupNetwork() {
   WiFi.onEvent(WiFiEvent);
 
   IPAddress ip(192, 168, 50, 3);
@@ -81,6 +80,11 @@ void setup() {
   //Ethernet.begin(mac, ip);
   ETH.begin();
   ETH.config(ip, gw, subnet, gw, gw);
+}
+
+void setup() {
+  Serial.begin(115200);
+  setupNetwork();
 }
 
 
