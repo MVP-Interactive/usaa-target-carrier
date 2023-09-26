@@ -10,10 +10,11 @@
 #include <WiFiMulti.h>
 
 #include <HTTPClient.h>
-
+#include <Client.h>
 #include <ETH.h>
 
 #include <esp_task_wdt.h>
+#include "esp_system.h"
 
 
 #define WDT_TIMEOUT 120  // define a 3 seconds WDT (Watch Dog Timer)
@@ -39,11 +40,13 @@ const uint8_t LED_PIN = 4;
 
 // How many NeoPixels are attached to the Arduino?
 const uint8_t LED_COUNT = 50;
+const uint8_t LED_SPLIT = 32;
 
-const IPAddress ip(192, 168, 50, 3);
-const IPAddress gw(192, 168, 50, 1);
+uint8_t sensor_id;
+IPAddress ip(192, 168, 77, 21);
+const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
-const String hitUrl = "http://192.168.50.2:9000/";
+const String hitUrl = "http://192.168.77.11:5301/api/player/";
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -103,6 +106,7 @@ void WiFiEvent(WiFiEvent_t event) {
 }
 
 void testClient(HTTPMsg msg) {
+
   HTTPClient http;
   http.begin(hitUrl);
 
@@ -127,10 +131,15 @@ void setupNetwork() {
   WiFi.onEvent(WiFiEvent);
 
   ETH.begin();
-  ETH.config(ip, gw, subnet, gw, gw);
-
+  //ETH.macAddress()
   Serial.print("ETH MAC: ");
   Serial.println(ETH.macAddress());
+  uint64_t chipid = ESP.getEfuseMac();  // The chip ID is essentially its MAC address(length: 6 bytes).
+  uint8_t addr = ((uint32_t)chipid) % 230;
+  sensor_id = addr + 20;
+  ip = IPAddress(192, 168, 77, sensor_id);
+
+  ETH.config(ip, gw, subnet, gw, gw);
 }
 
 void setup() {
@@ -145,14 +154,10 @@ void setup() {
 
   strip.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();   // Turn OFF all pixels ASAP
-                  //strip.setBrightness(100); // Set BRIGHTNESS to about 1/5 (max = 255)
+  //strip.setBrightness(100); // Set BRIGHTNESS to about 1/5 (max = 255)
 
   Serial.println("LSM9DS1 data read demo");
-  //  pinMode(PIN_I2C_POWER, INPUT);
   delay(1);
-  //  bool polarity = digitalRead(PIN_I2C_POWER);
-  //pinMode(PIN_I2C_POWER, OUTPUT);
-  //digitalWrite(PIN_I2C_POWER, !polarity);
 
   Wire.begin(13, 16);  // init I2C on the respective pins
 
@@ -177,15 +182,31 @@ void setup() {
 }
 
 void writeLEDs(LedState state) {
-  //remember NEO_GRB
-  for (int i = 0; i < strip.numPixels(); i++) {  // For each pixel in strip...
-    if (i < 32) {
-      strip.setPixelColor(i, 255, 255, 255);  //  Set pixel's color (in RAM)
-    } else {
-      strip.setPixelColor(i, 0, 255, 0);
-    }
-    strip.show();  //  Update strip to match
-                   //  Pause for a moment
+  switch (state) {
+    case OFF:
+      strip.clear();
+      break;
+    case HIT:
+    case REGULAR:
+      //remember NEO_GRB
+      for (int i = 0; i < strip.numPixels(); i++) {  // For each pixel in strip...
+        if (i < LED_SPLIT) {
+          strip.setPixelColor(i, 255, 255, 255);  //  Set pixel's color (in RAM)
+        } else {
+          strip.setPixelColor(i, 0, 0, 255);
+        }
+      }
+      strip.show();  //  Update strip to match
+                     //  Pause for a moment
+
+      break;
+    case DISCONNECTED:
+      for (int i = 0; i < strip.numPixels(); i++) {  // For each pixel in strip...
+        strip.setPixelColor(i, 0, 255, 0);
+      }
+      strip.show();  //  Update strip to match
+                     //  Pause for a moment
+      break;
   }
 }
 
