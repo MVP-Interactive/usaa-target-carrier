@@ -200,7 +200,7 @@ void writeLEDs(LedState state) {
         if (i < LED_SPLIT) {
           strip.setPixelColor(i, 0, 0, 255);
         } else {
-          strip.setPixelColor(i, 255, 255, 255);  //  Set pixel's color (in RAM)
+          strip.setPixelColor(i, 191, 191, 191);  //  Set pixel's color (in RAM)
         }
       }
       strip.show();  //  Update strip to match
