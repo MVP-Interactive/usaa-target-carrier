@@ -33,7 +33,7 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_1";
+const String TAG = "rev_2";
 uint8_t hit_thresh = 18;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
@@ -130,11 +130,8 @@ void testClient(HTTPMsg msg) {
     // HTTP header has been send and Server response header has been handled
     Serial.printf("[HTTP] POST... code: %d\n", httpCode);
 
-    // file found at server
-    //if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
     Serial.println("PL: " + payload);
-    //}
     return;
   }
   Serial.print("[HTTP] POST FAILED.\n");
@@ -144,7 +141,6 @@ void setupNetwork() {
   WiFi.onEvent(WiFiEvent);
 
   ETH.begin();
-  //ETH.macAddress()
   Serial.print("ETH MAC: ");
   Serial.println(ETH.macAddress());
   uint64_t chipid = ESP.getEfuseMac();  // The chip ID is essentially its MAC address(length: 6 bytes).
@@ -250,7 +246,7 @@ void loop() {
   sample_history.push(magnitude_sq);
 
   // 1 G is 96.04
-  if (magnitude_sq > 100) {  //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
+  if (magnitude_sq > 110) {  //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
     Serial.print("M: ");
     Serial.print(magnitude_sq);
     Serial.print(", ");
