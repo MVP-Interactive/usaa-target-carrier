@@ -30,7 +30,8 @@ enum LedState {
 
 enum HTTPMsg {
   HTTP_HIT,
-
+  HTTP_STATUS,
+  HTTP_CFG
 };
 
 const uint8_t HIT_THRESH = 12;
@@ -47,8 +48,9 @@ uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
 const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
-String hitUrl = "http://192.168.77.11:5301/api/player/";
-String statusUrl = "http://192.168.77.11:5301/api/status/";
+String hitUrl = "http://192.168.77.11:5300/api/player/";
+String statusUrl = "http://192.168.77.11:5300/api/status/";
+
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -115,21 +117,23 @@ void testClient(HTTPMsg msg) {
   HTTPClient http;
   http.begin(hitUrl);
 
-  Serial.print("[HTTP] POST...\n");
+  Serial.print("[HTTP] PUT...\n");
   // start connection and send HTTP header
-  int httpCode = http.POST(NULL, 0);
+  int httpCode = http.PUT(NULL, 0);
 
   // httpCode will be negative on error
   if (httpCode > 0) {
     // HTTP header has been send and Server response header has been handled
-    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+    Serial.printf("[HTTP] PUT... code: %d\n", httpCode);
 
     // file found at server
     if (httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
       Serial.println(payload);
     }
+    return;
   }
+  Serial.print("[HTTP] PUT FAILED.\n");
 }
 
 void setupNetwork() {
