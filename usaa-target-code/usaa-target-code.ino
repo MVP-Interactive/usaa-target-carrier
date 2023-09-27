@@ -48,7 +48,7 @@ uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
 const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
-String hitUrl = "http://192.168.77.11:5300/api/player/";
+String hitUrl = "http://192.168.77.11:5300/api/sensor/";
 String statusUrl = "http://192.168.77.11:5300/api/status/";
 
 
