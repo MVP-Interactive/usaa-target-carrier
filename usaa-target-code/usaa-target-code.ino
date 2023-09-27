@@ -55,6 +55,9 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // i2c
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
+CircularBuffer<float, 2000> sample_history;
+
+
 void setupSensor() {
   // 1.) Set the accelerometer range
   lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
@@ -231,6 +234,9 @@ void loop() {
   sensors_event_t a, m, g, temp;
 
   lsm.getEvent(&a, &m, &g, &temp);
+
+  float magnitude_sq = a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z;
+  sample_history.push(magnitude_sq);
 
   if (a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
 
