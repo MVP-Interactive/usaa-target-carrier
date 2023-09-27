@@ -34,7 +34,9 @@ enum HTTPMsg {
   HTTP_CFG
 };
 
-const uint8_t HIT_THRESH = 12;
+uint8_t hit_thresh = 18;
+uint8_t hit_thresh_sq = hit_thresh * hit_thresh;
+
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -50,6 +52,7 @@ const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
 String hitUrl = "http://192.168.77.11:5300/api/sensor/";
 String statusUrl = "http://192.168.77.11:5300/api/status/";
+String confifUrl = "http://192.168.77.11:5300/api/config/";
 
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -242,8 +245,11 @@ void loop() {
   float magnitude_sq = a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z;
   sample_history.push(magnitude_sq);
 
-  if (a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
-
+  if (magnitude_sq > 120) { //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
+    Serial.print("M: ");
+    Serial.print(magnitude_sq);
+    Serial.print("HT: ");
+    Serial.print(hit_thresh_sq);
     Serial.print("A_X: ");
     Serial.print(a.acceleration.x);
     Serial.print(", ");
@@ -257,7 +263,7 @@ void loop() {
 
   int rc = 30, gc = 0, bc = 100;  //  Red, green and blue intensity to display
 
-  if (a.acceleration.x > HIT_THRESH || a.acceleration.y > HIT_THRESH || a.acceleration.z > HIT_THRESH) {
+  if (magnitude_sq > hit_thresh_sq) { //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
     rc = 200, gc = 0, bc = 0;
     if (eth_connected) {
       testClient(HTTP_HIT);
