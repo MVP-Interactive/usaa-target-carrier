@@ -33,10 +33,11 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-
+const String TAG = "rev_1";
 uint8_t hit_thresh = 18;
-uint8_t hit_thresh_sq = hit_thresh * hit_thresh;
-
+// We don't want to do the sqrt part of the magnitudes, so we square the value to
+// compare against.
+float hit_thresh_sq = hit_thresh * hit_thresh;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -52,7 +53,7 @@ const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
 String hitUrl = "http://192.168.77.11:5300/api/sensor/";
 String statusUrl = "http://192.168.77.11:5300/api/status/";
-String confifUrl = "http://192.168.77.11:5300/api/config/";
+String configUrl = "http://192.168.77.11:5300/api/config/";
 
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -120,23 +121,23 @@ void testClient(HTTPMsg msg) {
   HTTPClient http;
   http.begin(hitUrl);
 
-  Serial.print("[HTTP] PUT...\n");
+  Serial.print("[HTTP] POST...\n");
   // start connection and send HTTP header
-  int httpCode = http.PUT(NULL, 0);
+  int httpCode = http.POST(NULL, 0);
 
   // httpCode will be negative on error
   if (httpCode > 0) {
     // HTTP header has been send and Server response header has been handled
-    Serial.printf("[HTTP] PUT... code: %d\n", httpCode);
+    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
 
     // file found at server
-    if (httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();
-      Serial.println(payload);
-    }
+    //if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.println("PL: " + payload);
+    //}
     return;
   }
-  Serial.print("[HTTP] PUT FAILED.\n");
+  Serial.print("[HTTP] POST FAILED.\n");
 }
 
 void setupNetwork() {
@@ -167,6 +168,7 @@ void setup() {
   }
 
   Serial.println("\n Starting...\n");
+  Serial.println("\n Rev " + TAG + " ...\n");
   Serial.flush();
 
   strip.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
@@ -242,14 +244,19 @@ void loop() {
 
   lsm.getEvent(&a, &m, &g, &temp);
 
-  float magnitude_sq = a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z;
+  float magnitude_sq = a.acceleration.x * a.acceleration.x
+                       + a.acceleration.y * a.acceleration.y
+                       + a.acceleration.z * a.acceleration.z;
   sample_history.push(magnitude_sq);
 
-  if (magnitude_sq > 120) { //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
+  // 1 G is 96.04
+  if (magnitude_sq > 100) {  //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
     Serial.print("M: ");
     Serial.print(magnitude_sq);
+    Serial.print(", ");
     Serial.print("HT: ");
     Serial.print(hit_thresh_sq);
+    Serial.print(", ");
     Serial.print("A_X: ");
     Serial.print(a.acceleration.x);
     Serial.print(", ");
@@ -263,7 +270,7 @@ void loop() {
 
   int rc = 30, gc = 0, bc = 100;  //  Red, green and blue intensity to display
 
-  if (magnitude_sq > hit_thresh_sq) { //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
+  if (magnitude_sq > hit_thresh_sq) {  //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
     rc = 200, gc = 0, bc = 0;
     if (eth_connected) {
       testClient(HTTP_HIT);
