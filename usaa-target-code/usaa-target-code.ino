@@ -1,20 +1,21 @@
 #include <Wire.h>
 #include <SPI.h>
-#include <Adafruit_LSM9DS1.h>
-#include <Adafruit_Sensor.h>    // not used in this demo but required!
-#include <Adafruit_NeoPixel.h>  //  Library that provides NeoPixel functions
-
 #include <Arduino.h>
 
 #include <WiFi.h>
 #include <WiFiMulti.h>
-
-#include <HTTPClient.h>
 #include <Client.h>
 #include <ETH.h>
 
 #include <esp_task_wdt.h>
 #include "esp_system.h"
+
+#include <Adafruit_LSM9DS1.h>
+#include <Adafruit_Sensor.h>    // not used in this demo but required!
+#include <Adafruit_NeoPixel.h>  //  Library that provides NeoPixel functions
+
+#include <HTTPClient.h>
+#include <CircularBuffer.h>
 
 
 #define WDT_TIMEOUT 120  // define a 3 seconds WDT (Watch Dog Timer)
@@ -46,7 +47,8 @@ uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
 const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
-const String hitUrl = "http://192.168.77.11:5301/api/player/";
+String hitUrl = "http://192.168.77.11:5301/api/player/";
+String statusUrl = "http://192.168.77.11:5301/api/status/";
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -138,6 +140,11 @@ void setupNetwork() {
   uint8_t addr = ((uint32_t)chipid) % 230;
   sensor_id = addr + 20;
   ip = IPAddress(192, 168, 77, sensor_id);
+
+  hitUrl = hitUrl + String(sensor_id);
+  statusUrl = statusUrl + String(sensor_id);
+  Serial.println("hitURL: " + hitUrl);
+  Serial.println("statusURL: " + statusUrl);
 
   ETH.config(ip, gw, subnet, gw, gw);
 }
@@ -246,5 +253,5 @@ void loop() {
       testClient(HTTP_HIT);
     }
   }
-  delay(10);
+  delay(5);
 }
