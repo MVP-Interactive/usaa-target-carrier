@@ -40,7 +40,7 @@ const uint8_t LED_PIN = 4;
 
 // How many NeoPixels are attached to the Arduino?
 const uint8_t LED_COUNT = 50;
-const uint8_t LED_SPLIT = 32;
+const uint8_t LED_SPLIT = 18;
 
 uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
@@ -191,9 +191,9 @@ void writeLEDs(LedState state) {
       //remember NEO_GRB
       for (int i = 0; i < strip.numPixels(); i++) {  // For each pixel in strip...
         if (i < LED_SPLIT) {
-          strip.setPixelColor(i, 255, 255, 255);  //  Set pixel's color (in RAM)
-        } else {
           strip.setPixelColor(i, 0, 0, 255);
+        } else {
+          strip.setPixelColor(i, 255, 255, 255);  //  Set pixel's color (in RAM)
         }
       }
       strip.show();  //  Update strip to match
@@ -213,8 +213,11 @@ void writeLEDs(LedState state) {
 void loop() {
   esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
 
-  writeLEDs(REGULAR);
-  // put your main code here, to run repeatedly:
+  if (eth_connected)
+    writeLEDs(REGULAR);
+  else
+    writeLEDs(DISCONNECTED);
+
   lsm.read(); /* ask it to read in the data */
 
   /* Get a new sensor event */
