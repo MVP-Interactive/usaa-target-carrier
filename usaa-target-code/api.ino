@@ -81,12 +81,18 @@ float APIGetConfig() {
 
     DynamicJsonDocument doc(2048);
     deserializeJson(doc, http.getStream());
-    uint8_t id = doc["Id"].as<uint8_t>();
-    float t = doc["Threshold"].as<float>();
-    Serial.println("Sid: " + String(id));
-    Serial.println("T: " + String(t));
 
-    return t;
+    if (doc.containsKey("Id")) {
+      uint8_t id = doc["Id"].as<uint8_t>();
+      Serial.println("Sid: " + String(id));
+    }
+    if (doc.containsKey("Threshold")) {
+      float t = doc["Threshold"].as<float>();
+      Serial.println("T: " + String(t));
+      return t;
+    }
+    Serial.print("[HTTP] GET DIDN'T HAVE Threshold.\n");
+    return 0.0;
   }
   Serial.print("[HTTP] GET FAILED.\n");
   return 0;
