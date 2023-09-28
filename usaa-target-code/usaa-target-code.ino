@@ -40,6 +40,9 @@ uint8_t hit_thresh = 19;
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
+long long lastHit = 0;
+uint32_t hitWait = 500;
+
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
 const uint8_t LED_PIN = 4;
@@ -60,10 +63,10 @@ Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
 CircularBuffer<float, 2000> sample_history;
 
-long long lastStatus = 0; // ms
+long long lastStatus = 0;  // ms
 long long lastConfig = 0;
 
-const uint32_t statusInterval = 60000; // ms
+const uint32_t statusInterval = 60000;  // ms
 const uint32_t configInterval = 60000;
 
 void setupSensor() {
@@ -128,7 +131,7 @@ void setupNetwork() {
   uint8_t addr = ((uint32_t)chipid) % 230;
   sensor_id = addr + 20;
   ip = IPAddress(192, 168, 77, sensor_id);
-  
+
   updateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
@@ -213,9 +216,9 @@ void loop() {
     lastStatus = now;
   }
 
-  if (lastConfig == 0 ||now > lastConfig + configInterval) {
+  if (lastConfig == 0 || now > lastConfig + configInterval) {
     float t = APIGetConfig();
-    if (t > 1) { // No way a threshhold of less than 1g is valid
+    if (t > 1) {  // No way a threshhold of less than 1g is valid
       hit_thresh = t;
       hit_thresh_sq = hit_thresh * hit_thresh;
       Serial.println("New threshold: " + String(t));
@@ -259,12 +262,16 @@ void loop() {
     Serial.println("");
   }
 
-  int rc = 30, gc = 0, bc = 100;  //  Red, green and blue intensity to display
-
   if (magnitude_sq > hit_thresh_sq) {  //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
-    rc = 200, gc = 0, bc = 0;
-    if (eth_connected) {
-      APIPostHit();
+    long long now = millis();
+
+    if (now < lastHit + hitWait) {
+      // do nothing
+    } else {
+      lastHit = now;
+      if (eth_connected) {
+        APIPostHit();
+      }
     }
   }
   delay(5);
