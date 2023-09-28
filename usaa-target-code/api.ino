@@ -69,7 +69,7 @@ void APIPostStatus(uint8_t sensor_id) {
 float APIGetConfig() {
 
   HTTPClient http;
-  http.begin(hitUrl);
+  http.begin(configUrl);
 
   Serial.print("[HTTP] GET CONFIG...\n");
   // start connection and send HTTP header
@@ -83,19 +83,21 @@ float APIGetConfig() {
     String payload = http.getString();
 
     DynamicJsonDocument doc(2048);
-    deserializeJson(doc, http.getStream());
+    deserializeJson(doc, payload);
 
-    if (doc.containsKey("Id")) {
-      uint8_t id = doc["Id"].as<uint8_t>();
+    if (doc.containsKey("id")) {
+      uint8_t id = doc["id"].as<uint8_t>();
       Serial.println("Sid: " + String(id));
     }
-    if (doc.containsKey("Threshold")) {
-      float t = doc["Threshold"].as<float>();
+    if (doc.containsKey("threshold")) {
+      float t = doc["threshold"].as<float>();
       Serial.println("T: " + String(t));
       return t;
     }
 
     Serial.println("PL: " + payload);
+    Serial.print("Doc: ");
+    serializeJson(doc, Serial);
 
     Serial.print("[HTTP] GET DIDN'T HAVE Threshold.\n");
     return 0.0;

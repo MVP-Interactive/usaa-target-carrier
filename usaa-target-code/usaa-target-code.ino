@@ -42,7 +42,7 @@ uint8_t hit_thresh = 19;
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hitWait = 500;
+uint32_t hitWait = 2000;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
