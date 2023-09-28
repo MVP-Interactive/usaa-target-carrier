@@ -14,6 +14,7 @@ void updateUrls(uint8_t sensor_id) {
   configUrl = configUrlBase + String(sensor_id);
   Serial.println("hitURL: " + hitUrl);
   Serial.println("statusURL: " + statusUrl);
+  Serial.println("configURL: " + configUrl);
 }
 
 void APIPostHit() {
