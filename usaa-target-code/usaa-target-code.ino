@@ -15,6 +15,7 @@
 #include <Adafruit_NeoPixel.h>  //  Library that provides NeoPixel functions
 
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <CircularBuffer.h>
 
 
@@ -33,8 +34,8 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_2";
-uint8_t hit_thresh = 18;
+const String TAG = "rev_3";
+uint8_t hit_thresh = 19;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
@@ -51,10 +52,6 @@ uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
 const IPAddress gw(192, 168, 77, 1);
 const IPAddress subnet(255, 255, 255, 0);
-String hitUrl = "http://192.168.77.11:5300/api/sensor/";
-String statusUrl = "http://192.168.77.11:5300/api/status/";
-String configUrl = "http://192.168.77.11:5300/api/config/";
-
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -63,6 +60,11 @@ Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
 CircularBuffer<float, 2000> sample_history;
 
+long long lastStatus = 0; // ms
+long long lastConfig = 0;
+
+const uint32_t statusInterval = 60000; // ms
+const uint32_t configInterval = 60000;
 
 void setupSensor() {
   // 1.) Set the accelerometer range
@@ -116,27 +118,6 @@ void WiFiEvent(WiFiEvent_t event) {
   }
 }
 
-void testClient(HTTPMsg msg) {
-
-  HTTPClient http;
-  http.begin(hitUrl);
-
-  Serial.print("[HTTP] POST...\n");
-  // start connection and send HTTP header
-  int httpCode = http.POST(NULL, 0);
-
-  // httpCode will be negative on error
-  if (httpCode > 0) {
-    // HTTP header has been send and Server response header has been handled
-    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-
-    String payload = http.getString();
-    Serial.println("PL: " + payload);
-    return;
-  }
-  Serial.print("[HTTP] POST FAILED.\n");
-}
-
 void setupNetwork() {
   WiFi.onEvent(WiFiEvent);
 
@@ -147,11 +128,8 @@ void setupNetwork() {
   uint8_t addr = ((uint32_t)chipid) % 230;
   sensor_id = addr + 20;
   ip = IPAddress(192, 168, 77, sensor_id);
-
-  hitUrl = hitUrl + String(sensor_id);
-  statusUrl = statusUrl + String(sensor_id);
-  Serial.println("hitURL: " + hitUrl);
-  Serial.println("statusURL: " + statusUrl);
+  
+  updateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
 }
@@ -228,6 +206,23 @@ void writeLEDs(LedState state) {
 void loop() {
   esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
 
+  unsigned long now = millis();
+
+  if (lastStatus == 0 || now > lastStatus + statusInterval) {
+    APIPostStatus(sensor_id);
+    lastStatus = now;
+  }
+
+  if (lastConfig == 0 ||now > lastConfig + configInterval) {
+    float t = APIGetConfig();
+    if (t < 1) { // No way a threshhold of less than 1g is valid
+      hit_thresh = t;
+      hit_thresh_sq = hit_thresh * hit_thresh;
+      Serial.println("New threshold: " + String(t));
+    }
+    lastConfig = now;
+  }
+
   if (eth_connected)
     writeLEDs(REGULAR);
   else
@@ -269,7 +264,7 @@ void loop() {
   if (magnitude_sq > hit_thresh_sq) {  //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
     rc = 200, gc = 0, bc = 0;
     if (eth_connected) {
-      testClient(HTTP_HIT);
+      APIPostHit();
     }
   }
   delay(5);
