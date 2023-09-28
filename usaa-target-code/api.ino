@@ -81,8 +81,8 @@ float APIGetConfig() {
 
     DynamicJsonDocument doc(2048);
     deserializeJson(doc, http.getStream());
-    uint8_t id = doc["id"].as<uint8_t>();
-    float t = doc["threshold"].as<float>();
+    uint8_t id = doc["Id"].as<uint8_t>();
+    float t = doc["Threshold"].as<float>();
     Serial.println("Sid: " + String(id));
     Serial.println("T: " + String(t));
 

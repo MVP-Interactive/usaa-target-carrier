@@ -215,7 +215,7 @@ void loop() {
 
   if (lastConfig == 0 ||now > lastConfig + configInterval) {
     float t = APIGetConfig();
-    if (t < 1) { // No way a threshhold of less than 1g is valid
+    if (t > 1) { // No way a threshhold of less than 1g is valid
       hit_thresh = t;
       hit_thresh_sq = hit_thresh * hit_thresh;
       Serial.println("New threshold: " + String(t));
