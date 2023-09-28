@@ -17,6 +17,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <CircularBuffer.h>
+#include <CRC.h>
 
 
 #define WDT_TIMEOUT 120  // define a 3 seconds WDT (Watch Dog Timer)
@@ -127,9 +128,16 @@ void setupNetwork() {
   ETH.begin();
   Serial.print("ETH MAC: ");
   Serial.println(ETH.macAddress());
+
   uint64_t chipid = ESP.getEfuseMac();  // The chip ID is essentially its MAC address(length: 6 bytes).
-  uint8_t addr = ((uint32_t)chipid) % 230;
-  sensor_id = addr + 20;
+
+  uint8_t* mac = (uint8_t*)&chipid;
+
+  //uint8_t addr = ((uint32_t)chipid) % 230;
+  //sensor_id = addr + 20;
+
+  sensor_id = (calcCRC8(mac, 8) & 0x7f) + 20;
+  
   ip = IPAddress(192, 168, 77, sensor_id);
 
   updateUrls(sensor_id);
