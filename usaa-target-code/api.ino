@@ -80,6 +80,8 @@ float APIGetConfig() {
     // HTTP header has been send and Server response header has been handled
     Serial.printf("[HTTP] GET... code: %d\n", httpCode);
 
+    String payload = http.getString();
+
     DynamicJsonDocument doc(2048);
     deserializeJson(doc, http.getStream());
 
@@ -92,6 +94,9 @@ float APIGetConfig() {
       Serial.println("T: " + String(t));
       return t;
     }
+
+    Serial.println("PL: " + payload);
+
     Serial.print("[HTTP] GET DIDN'T HAVE Threshold.\n");
     return 0.0;
   }
