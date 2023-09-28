@@ -35,14 +35,14 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_3";
+const String TAG = "rev_4";
 uint8_t hit_thresh = 19;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hitWait = 2000;
+uint32_t hitWait = 5000;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -51,6 +51,9 @@ const uint8_t LED_PIN = 4;
 // How many NeoPixels are attached to the Arduino?
 const uint8_t LED_COUNT = 50;
 const uint8_t LED_SPLIT = 18;
+
+uint8_t WHITE_LEVEL = 191;
+uint16_t BLINK_INTERVAL = 200;
 
 uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
@@ -132,14 +135,8 @@ void setupNetwork() {
   uint64_t chipid = ESP.getEfuseMac();  // The chip ID is essentially its MAC address(length: 6 bytes).
 
   uint8_t* mac = (uint8_t*)&chipid;
-
-  //uint8_t addr = ((uint32_t)chipid) % 230;
-  //sensor_id = addr + 20;
-
   sensor_id = (calcCRC8(mac, 8) & 0x7f) + 20;
-  
   ip = IPAddress(192, 168, 77, sensor_id);
-
   updateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
@@ -191,13 +188,39 @@ void writeLEDs(LedState state) {
       strip.clear();
       break;
     case HIT:
+      {
+        long long now = millis();
+        int32_t diff = now - lastHit;
+        int blinkState = (diff / BLINK_INTERVAL) & 0x00000001;
+
+        if (blinkState) {
+          for (int i = 0; i < strip.numPixels(); i++) {  
+            if (i < LED_SPLIT) {
+              strip.setPixelColor(i, 0, 0, 255);
+            } else {
+              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);  
+            }
+          }
+        } else {
+          for (int i = 0; i < strip.numPixels(); i++) { 
+            if (i < LED_SPLIT) {
+              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);
+            } else {
+              strip.setPixelColor(i, 0, 0, 255);
+            }
+          }
+        }
+        strip.show();  //  Update strip to match
+                       //  Pause for a moment
+      }
+      break;
     case REGULAR:
       //remember NEO_GRB
       for (int i = 0; i < strip.numPixels(); i++) {  // For each pixel in strip...
         if (i < LED_SPLIT) {
           strip.setPixelColor(i, 0, 0, 255);
         } else {
-          strip.setPixelColor(i, 191, 191, 191);  //  Set pixel's color (in RAM)
+          strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);  //  Set pixel's color (in RAM)
         }
       }
       strip.show();  //  Update strip to match
@@ -214,9 +237,7 @@ void writeLEDs(LedState state) {
   }
 }
 
-void loop() {
-  esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
-
+void checkStatusConfig() {
   unsigned long now = millis();
 
   if (lastStatus == 0 || now > lastStatus + statusInterval) {
@@ -233,11 +254,25 @@ void loop() {
     }
     lastConfig = now;
   }
+}
 
-  if (eth_connected)
-    writeLEDs(REGULAR);
-  else
-    writeLEDs(DISCONNECTED);
+void debugInfo(float magnitude_sq, sensors_vec_t a) {
+  Serial.print("M: ");
+  Serial.print(magnitude_sq);
+  Serial.print(", HT: ");
+  Serial.print(hit_thresh_sq);
+  Serial.print(", A_X: ");
+  Serial.print(a.x);
+  Serial.print(", A_Y: ");
+  Serial.print(a.y);
+  Serial.print(", A_Z: ");
+  Serial.println(a.z);
+}
+
+void loop() {
+  esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
+
+  checkStatusConfig();
 
   lsm.read(); /* ask it to read in the data */
 
@@ -251,36 +286,33 @@ void loop() {
                        + a.acceleration.z * a.acceleration.z;
   sample_history.push(magnitude_sq);
 
-  // 1 G is 96.04
-  if (magnitude_sq > 110) {  //a.acceleration.x > 10 || a.acceleration.y > 10 || a.acceleration.z > 10) {
-    Serial.print("M: ");
-    Serial.print(magnitude_sq);
-    Serial.print(", ");
-    Serial.print("HT: ");
-    Serial.print(hit_thresh_sq);
-    Serial.print(", ");
-    Serial.print("A_X: ");
-    Serial.print(a.acceleration.x);
-    Serial.print(", ");
-    Serial.print("A_Y: ");
-    Serial.print(a.acceleration.y);
-    Serial.print(", ");
-    Serial.print("A_Z: ");
-    Serial.print(a.acceleration.z);
-    Serial.println("");
+  // 1 Gravity Squared is 96.04
+  if (magnitude_sq > 110) {
+    debugInfo(magnitude_sq, a.acceleration);
   }
 
-  if (magnitude_sq > hit_thresh_sq) {  //a.acceleration.x > hit_thresh || a.acceleration.y > hit_thresh || a.acceleration.z > hit_thresh) {
-    long long now = millis();
+  bool isHit = false;
+  long long now = millis();
 
-    if (now < lastHit + hitWait) {
-      // do nothing
-    } else {
-      lastHit = now;
-      if (eth_connected) {
-        APIPostHit();
-      }
+  if (lastHit && now < lastHit + hitWait) {
+    isHit = true;
+  } else if (magnitude_sq > hit_thresh_sq) {
+    isHit = true;
+    lastHit = now;
+    if (eth_connected) {
+      APIPostHit();
     }
   }
+
+  // if (isHit)
+  //   Serial.println("IsHit: " + String(isHit));
+
+  if (!eth_connected)
+    writeLEDs(DISCONNECTED);
+  else if (isHit)
+    writeLEDs(HIT);
+  else
+    writeLEDs(REGULAR);
+
   delay(5);
 }
