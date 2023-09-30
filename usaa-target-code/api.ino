@@ -49,6 +49,8 @@ void APIPostStatus(uint8_t sensor_id) {
 
   HTTPClient http;
   http.begin(statusUrl);
+  http.addHeader("accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
 
   Serial.print("[HTTP] POST STATUS...\n");
   // start connection and send HTTP header
