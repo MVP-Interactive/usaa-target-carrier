@@ -42,9 +42,10 @@ uint8_t hit_thresh = 19;
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hitWait = 500;
-uint32_t hitFlash = 5000;
-
+uint32_t hitWait = 500;  //How long to enforce no hits after a hit, in ms
+uint32_t hitFlash = 5000; // How long to strobe LEDs in ms
+uint8_t WHITE_LEVEL = 191;
+uint16_t BLINK_INTERVAL = 200;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -54,8 +55,6 @@ const uint8_t LED_PIN = 4;
 const uint8_t LED_COUNT = 50;
 const uint8_t LED_SPLIT = 18;
 
-uint8_t WHITE_LEVEL = 191;
-uint16_t BLINK_INTERVAL = 200;
 
 uint8_t sensor_id;
 IPAddress ip(192, 168, 77, 21);
@@ -296,7 +295,7 @@ void loop() {
   bool isHit = false;
   long long now = millis();
 
-  if (lastHit && now < lastHit + hitWait) {
+  if (lastHit && now < lastHit + hitWait) {  
     isHit = true;
   } else if (magnitude_sq > hit_thresh_sq) {
     isHit = true;
