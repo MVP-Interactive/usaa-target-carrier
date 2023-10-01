@@ -35,14 +35,16 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_4";
+const String TAG = "rev_5";
 uint8_t hit_thresh = 19;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hitWait = 5000;
+uint32_t hitWait = 500;
+uint32_t hitFlash = 5000;
+
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -157,7 +159,7 @@ void setup() {
   strip.show();   // Turn OFF all pixels ASAP
   //strip.setBrightness(100); // Set BRIGHTNESS to about 1/5 (max = 255)
 
-  Serial.println("LSM9DS1 data read demo");
+  Serial.println("MVP Hit Sensor ...");
   delay(1);
 
   Wire.begin(13, 16);  // init I2C on the respective pins
@@ -194,15 +196,15 @@ void writeLEDs(LedState state) {
         int blinkState = (diff / BLINK_INTERVAL) & 0x00000001;
 
         if (blinkState) {
-          for (int i = 0; i < strip.numPixels(); i++) {  
+          for (int i = 0; i < strip.numPixels(); i++) {
             if (i < LED_SPLIT) {
               strip.setPixelColor(i, 0, 0, 255);
             } else {
-              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);  
+              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);
             }
           }
         } else {
-          for (int i = 0; i < strip.numPixels(); i++) { 
+          for (int i = 0; i < strip.numPixels(); i++) {
             if (i < LED_SPLIT) {
               strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);
             } else {
@@ -304,8 +306,9 @@ void loop() {
     }
   }
 
-  // if (isHit)
-  //   Serial.println("IsHit: " + String(isHit));
+  if (lastHit && now < lastHit + hitFlash) {
+    isHit = true;
+  }
 
   if (!eth_connected)
     writeLEDs(DISCONNECTED);
