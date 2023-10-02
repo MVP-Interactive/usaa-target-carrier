@@ -19,9 +19,13 @@
 #include <CircularBuffer.h>
 #include <CRC.h>
 
+#include "usaa_api.h"
 
-#define WDT_TIMEOUT 120  // define a 3 seconds WDT (Watch Dog Timer)
-int BootReason = 99;
+#define WDT_TIMEOUT 120  // define a 1 minute WDT (Watch Dog Timer)
+
+// 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
+// see: https://github.com/espressif/esp-idf/blob/272b4091f1f1ff169c84a4ee6b67ded4a005a8a7/components/esp_system/include/esp_system.h#L38
+int BootReason = 99; 
 
 enum LedState {
   OFF,
@@ -35,15 +39,15 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_5";
+const String TAG = "rev_6";
 uint8_t hit_thresh = 19;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hitWait = 500;  //How long to enforce no hits after a hit, in ms
-uint32_t hitFlash = 5000; // How long to strobe LEDs in ms
+uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
+uint32_t hit_flash = 5000;  // How long to strobe LEDs in ms
 uint8_t WHITE_LEVEL = 191;
 uint16_t BLINK_INTERVAL = 200;
 
@@ -138,7 +142,7 @@ void setupNetwork() {
   uint8_t* mac = (uint8_t*)&chipid;
   sensor_id = (calcCRC8(mac, 8) & 0x7f) + 20;
   ip = IPAddress(192, 168, 77, sensor_id);
-  updateUrls(sensor_id);
+  APIUpdateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
 }
@@ -247,12 +251,24 @@ void checkStatusConfig() {
   }
 
   if (lastConfig == 0 || now > lastConfig + configInterval) {
-    float t = APIGetConfig();
-    if (t > 1) {  // No way a threshhold of less than 1g is valid
-      hit_thresh = t;
+    APIConfig config = APIGetConfig();
+    if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
+      hit_thresh = config.threshold;
       hit_thresh_sq = hit_thresh * hit_thresh;
-      Serial.println("New threshold: " + String(t));
+      Serial.println("New threshold: " + String(hit_thresh));
     }
+
+    if (config.hit_wait_is_set) {
+      hit_wait = config.hit_wait;
+      Serial.println("New hit_wait: " + String(hit_wait));
+    }
+
+    if (config.hit_flash_is_set) {
+      hit_flash = config.hit_flash;
+      Serial.println("New hit_flash: " + String(hit_flash));
+    }
+
+
     lastConfig = now;
   }
 }
@@ -295,7 +311,7 @@ void loop() {
   bool isHit = false;
   long long now = millis();
 
-  if (lastHit && now < lastHit + hitWait) {  
+  if (lastHit && now < lastHit + hit_wait) {
     isHit = true;
   } else if (magnitude_sq > hit_thresh_sq) {
     isHit = true;
@@ -305,7 +321,7 @@ void loop() {
     }
   }
 
-  if (lastHit && now < lastHit + hitFlash) {
+  if (lastHit && now < lastHit + hit_flash) {
     isHit = true;
   }
 
