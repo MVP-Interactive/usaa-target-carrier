@@ -1,3 +1,5 @@
+// -*- mode: C++;  tab-width: 2; c-basic-offset: 2;  -*-
+
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -25,7 +27,7 @@
 
 // 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
 // see: https://github.com/espressif/esp-idf/blob/272b4091f1f1ff169c84a4ee6b67ded4a005a8a7/components/esp_system/include/esp_system.h#L38
-int BootReason = 99; 
+int BootReason = 99;
 
 enum LedState {
   OFF,
@@ -48,8 +50,8 @@ float hit_thresh_sq = hit_thresh * hit_thresh;
 long long lastHit = 0;
 uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
 uint32_t hit_flash = 5000;  // How long to strobe LEDs in ms
-uint8_t WHITE_LEVEL = 191;
-uint16_t BLINK_INTERVAL = 200;
+uint8_t white_level = 191;
+uint16_t blink_interval = 200;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
@@ -196,20 +198,20 @@ void writeLEDs(LedState state) {
       {
         long long now = millis();
         int32_t diff = now - lastHit;
-        int blinkState = (diff / BLINK_INTERVAL) & 0x00000001;
+        int blinkState = (diff / blink_interval) & 0x00000001;
 
         if (blinkState) {
           for (int i = 0; i < strip.numPixels(); i++) {
             if (i < LED_SPLIT) {
               strip.setPixelColor(i, 0, 0, 255);
             } else {
-              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);
+              strip.setPixelColor(i, white_level, white_level, white_level);
             }
           }
         } else {
           for (int i = 0; i < strip.numPixels(); i++) {
             if (i < LED_SPLIT) {
-              strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);
+              strip.setPixelColor(i, white_level, white_level, white_level);
             } else {
               strip.setPixelColor(i, 0, 0, 255);
             }
@@ -225,7 +227,7 @@ void writeLEDs(LedState state) {
         if (i < LED_SPLIT) {
           strip.setPixelColor(i, 0, 0, 255);
         } else {
-          strip.setPixelColor(i, WHITE_LEVEL, WHITE_LEVEL, WHITE_LEVEL);  //  Set pixel's color (in RAM)
+          strip.setPixelColor(i, white_level, white_level, white_level);  //  Set pixel's color (in RAM)
         }
       }
       strip.show();  //  Update strip to match
@@ -268,6 +270,15 @@ void checkStatusConfig() {
       Serial.println("New hit_flash: " + String(hit_flash));
     }
 
+    if (config.blink_interval_is_set) {
+      blink_interval = config.blink_interval;
+      Serial.println("New hit_flash: " + String(blink_interval));
+    }
+
+    if (config.white_level_is_set) {
+      white_level = config.white_level;
+      Serial.println("New white_level: " + String(white_level));
+    }
 
     lastConfig = now;
   }

@@ -1,3 +1,5 @@
+// -*- mode: C++;  tab-width: 2; c-basic-offset: 2;  -*-
+
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
@@ -74,7 +76,7 @@ void APIPostStatus(uint8_t sensor_id) {
 APIConfig APIGetConfig() {
   APIConfig ret_val;
   memset(&ret_val, 0, sizeof(ret_val));
-  
+
   HTTPClient http;
   http.begin(configUrl);
 
@@ -108,7 +110,7 @@ APIConfig APIGetConfig() {
       Serial.print("[HTTP] GET DIDN'T HAVE Threshold.\n");
 
     if (doc.containsKey("hit_wait")) {
-      float t = doc["hit_wait"].as<float>();
+      float t = doc["hit_wait"].as<uint32_t>();
       Serial.println("T: " + String(t));
       ret_val.hit_wait = t;
       ret_val.hit_wait_is_set = true;
@@ -117,13 +119,32 @@ APIConfig APIGetConfig() {
       Serial.print("[HTTP] GET DIDN'T HAVE hit_wait.\n");
 
     if (doc.containsKey("hit_flash")) {
-      float t = doc["hit_flash"].as<float>();
+      float t = doc["hit_flash"].as<uint32_t>();
       Serial.println("T: " + String(t));
       ret_val.hit_flash = t;
       ret_val.hit_flash_is_set = true;
       semi_success = true;
     } else
       Serial.print("[HTTP] GET DIDN'T HAVE hit_flash.\n");
+
+    if (doc.containsKey("white_level")) {
+      float t = doc["white_level"].as<uint8_t>();
+      Serial.println("T: " + String(t));
+      ret_val.white_level = t;
+      ret_val.white_level_is_set = true;
+      semi_success = true;
+    } else
+      Serial.print("[HTTP] GET DIDN'T HAVE white_level.\n");
+
+    if (doc.containsKey("blink_interval")) {
+      float t = doc["blink_interval"].as<uint32_t>();
+      Serial.println("T: " + String(t));
+      ret_val.blink_interval = t;
+      ret_val.blink_interval_is_set = true;
+      semi_success = true;
+    } else
+      Serial.print("[HTTP] GET DIDN'T HAVE blink_interval.\n");
+
 
     if (!semi_success) {
       Serial.println("PL: " + payload);
