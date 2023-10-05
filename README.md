@@ -1,7 +1,7 @@
 # 9dof sensor/light package with PoE
 
 ## About
-Connect an ESP32-POE-ISO to a lsm9ds1 sensor via StemmaQT and a WS2811 
+Connect an ESP32-POE-ISO to a lsm9ds1 sensor via StemmaQT and a WS2811
 light strand along with 12V power.
 
 Because of the 12V power for the LEDs, the PoE on the ESP32-POE will not be used.
@@ -20,7 +20,31 @@ Connect the PoE extractor's ethernet out to the Olimex ESP32 board.
 
 Connect the PoE extractor's 12v barrel to the 12v barrel on the board.
 
-IF using debug/programming USB-C board, not that while you can physically plug the USB-C in other direction, only one direction will work due to a flay in the board.
+If using debug/programming USB-C board, not that while you can
+physically plug the USB-C in other direction, only one direction will
+work due to a flay in the board.
+
+## Software
+
+To build the software, use Arduino IDE 2.2.x.
+
+Add the following board manager URLs in Preferences:
+https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
+
+Add the following libraries in the Library Manager:
+Arduino_LSM9DS1
+Ethernet
+Adafruit 9DOF
+Adafruit BusIO
+Adafruit NeoPixel
+Adafruit Unified Sensor
+ArduinoJson
+CRC
+CircularBuffer
+HttpClient
+
+If during the process, additional libraries are recommended, accept them.
 
 
 ## BOM
@@ -33,5 +57,3 @@ https://www.amazon.com/gp/product/B01AG923EU/
 https://www.amazon.com/gp/product/B07L7QDZJW/
 
 https://www.amazon.com/dp/B01DC0KIT2
-
-
