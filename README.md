@@ -32,6 +32,9 @@ Add the following board manager URLs in Preferences:
 https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
 https://espressif.github.io/arduino-esp32/package_esp32_index.json
 
+After that then press Ctrl+Shift+B to bring up the board manager dialog.
+In the search box, type "esp32" and look for "esp32 by Expressif Systems" and click Install.
+
 Add the following libraries in the Library Manager:
 Arduino_LSM9DS1
 Ethernet
