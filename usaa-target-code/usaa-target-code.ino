@@ -287,7 +287,7 @@ void writeLEDs(LedState state, bool goSlow) {
         }
         if (goSlow) {
           strip.show();
-          delay(50);
+          delay(20);
         }
       }
       strip.show();  //  Update strip to match
