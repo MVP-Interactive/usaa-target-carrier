@@ -23,6 +23,8 @@
 
 #include "usaa_api.h"
 
+const String TAG = "rev_7";
+
 #define WDT_TIMEOUT 120  // define a 1 minute WDT (Watch Dog Timer)
 
 // 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
@@ -41,7 +43,6 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-const String TAG = "rev_6";
 uint8_t hit_thresh = 19;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
@@ -79,6 +80,22 @@ long long lastConfig = 0;
 
 const uint32_t statusInterval = 60000;  // ms
 const uint32_t configInterval = 60000;
+
+const String RESET_REASONS[] = {
+    "ESP_RST_UNKNOWN",    //!< Reset reason can not be determined
+    "ESP_RST_POWERON",    //!< Reset due to power-on event
+    "ESP_RST_EXT",        //!< Reset by external pin (not applicable for ESP32)
+    "ESP_RST_SW",         //!< Software reset via esp_restart
+    "ESP_RST_PANIC",      //!< Software reset due to exception/panic
+    "ESP_RST_INT_WDT",    //!< Reset (software or hardware) due to interrupt watchdog
+    "ESP_RST_TASK_WDT",   //!< Reset due to task watchdog
+    "ESP_RST_WDT",        //!< Reset due to other watchdogs
+    "ESP_RST_DEEPSLEEP",  //!< Reset after exiting deep sleep mode
+    "ESP_RST_BROWNOUT",   //!< Brownout reset (software or hardware)
+    "ESP_RST_SDIO",       //!< Reset over SDIO
+    "ESP_RST_USB",        //!< Reset by USB peripheral
+    "ESP_RST_JTAG",       //!< Reset by JTAG
+};
 
 void setupSensor() {
   // 1.) Set the accelerometer range
@@ -186,7 +203,7 @@ void setup() {
   esp_task_wdt_add(NULL);                // add current thread to WDT watch
   BootReason = esp_reset_reason();
   Serial.print("Boot reason:");
-  Serial.println(BootReason);
+  Serial.println(RESET_REASONS[BootReason]);
 }
 
 void writeLEDs(LedState state) {
