@@ -20,7 +20,7 @@ public:
 
 void APIUpdateUrls(uint8_t sensor_id);
 void APIPostHit();
-void APIPostStatus(uint8_t sensor_id);
+void APIPostStatus(uint8_t sensor_id,  const String & rev);
 APIConfig APIGetConfig();
 
 #endif

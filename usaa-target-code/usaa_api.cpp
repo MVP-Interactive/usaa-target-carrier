@@ -59,12 +59,13 @@ const String RESET_REASONS[] = {
     "ESP_RST_JTAG",       //!< Reset by JTAG
 };
 
-void APIPostStatus(uint8_t sensor_id) {
+void APIPostStatus(uint8_t sensor_id, const String & rev) {
 
   DynamicJsonDocument doc(65536);
   doc["uptime"] = (float)(millis() / 1024.0f);
   doc["reboot_cause"] = RESET_REASONS[esp_reset_reason()];
   doc["id"] = sensor_id;
+  doc["rev"] = rev;
   String json;
   serializeJson(doc, json);
 

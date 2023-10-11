@@ -22,6 +22,7 @@
 #include <CRC.h>
 
 #include "usaa_api.h"
+#include "leds.h"
 
 const String TAG = "rev_7";
 
@@ -30,13 +31,6 @@ const String TAG = "rev_7";
 // 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
 // see: https://github.com/espressif/esp-idf/blob/272b4091f1f1ff169c84a4ee6b67ded4a005a8a7/components/esp_system/include/esp_system.h#L38
 int BootReason = 99;
-
-enum LedState {
-  OFF,
-  REGULAR,
-  HIT,
-  DISCONNECTED
-};
 
 enum HTTPMsg {
   HTTP_HIT,
@@ -51,7 +45,7 @@ float hit_thresh_sq = hit_thresh * hit_thresh;
 long long lastHit = 0;
 uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
 uint32_t hit_flash = 5000;  // How long to strobe LEDs in ms
-uint8_t white_level = 191;
+uint8_t white_level = 100;
 uint16_t blink_interval = 200;
 
 // Which pin on the Arduino is connected to the NeoPixels?
@@ -82,19 +76,19 @@ const uint32_t statusInterval = 60000;  // ms
 const uint32_t configInterval = 60000;
 
 const String RESET_REASONS[] = {
-    "ESP_RST_UNKNOWN",    //!< Reset reason can not be determined
-    "ESP_RST_POWERON",    //!< Reset due to power-on event
-    "ESP_RST_EXT",        //!< Reset by external pin (not applicable for ESP32)
-    "ESP_RST_SW",         //!< Software reset via esp_restart
-    "ESP_RST_PANIC",      //!< Software reset due to exception/panic
-    "ESP_RST_INT_WDT",    //!< Reset (software or hardware) due to interrupt watchdog
-    "ESP_RST_TASK_WDT",   //!< Reset due to task watchdog
-    "ESP_RST_WDT",        //!< Reset due to other watchdogs
-    "ESP_RST_DEEPSLEEP",  //!< Reset after exiting deep sleep mode
-    "ESP_RST_BROWNOUT",   //!< Brownout reset (software or hardware)
-    "ESP_RST_SDIO",       //!< Reset over SDIO
-    "ESP_RST_USB",        //!< Reset by USB peripheral
-    "ESP_RST_JTAG",       //!< Reset by JTAG
+  "ESP_RST_UNKNOWN",    //!< Reset reason can not be determined
+  "ESP_RST_POWERON",    //!< Reset due to power-on event
+  "ESP_RST_EXT",        //!< Reset by external pin (not applicable for ESP32)
+  "ESP_RST_SW",         //!< Software reset via esp_restart
+  "ESP_RST_PANIC",      //!< Software reset due to exception/panic
+  "ESP_RST_INT_WDT",    //!< Reset (software or hardware) due to interrupt watchdog
+  "ESP_RST_TASK_WDT",   //!< Reset due to task watchdog
+  "ESP_RST_WDT",        //!< Reset due to other watchdogs
+  "ESP_RST_DEEPSLEEP",  //!< Reset after exiting deep sleep mode
+  "ESP_RST_BROWNOUT",   //!< Brownout reset (software or hardware)
+  "ESP_RST_SDIO",       //!< Reset over SDIO
+  "ESP_RST_USB",        //!< Reset by USB peripheral
+  "ESP_RST_JTAG",       //!< Reset by JTAG
 };
 
 void setupSensor() {
@@ -166,6 +160,47 @@ void setupNetwork() {
   ETH.config(ip, gw, subnet, gw, gw);
 }
 
+void checkStatusConfig() {
+  unsigned long now = millis();
+
+  if (lastStatus == 0 || now > lastStatus + statusInterval) {
+    APIPostStatus(sensor_id, TAG);
+    lastStatus = now;
+  }
+
+  if (lastConfig == 0 || now > lastConfig + configInterval) {
+    APIConfig config = APIGetConfig();
+    if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
+      hit_thresh = config.threshold;
+      hit_thresh_sq = hit_thresh * hit_thresh;
+      Serial.println("New threshold: " + String(hit_thresh));
+    }
+
+    if (config.hit_wait_is_set) {
+      hit_wait = config.hit_wait;
+      Serial.println("New hit_wait: " + String(hit_wait));
+    }
+
+    if (config.hit_flash_is_set) {
+      hit_flash = config.hit_flash;
+      Serial.println("New hit_flash: " + String(hit_flash));
+    }
+
+    if (config.blink_interval_is_set) {
+      blink_interval = config.blink_interval;
+      Serial.println("New hit_flash: " + String(blink_interval));
+    }
+
+    if (config.white_level_is_set) {
+      white_level = config.white_level;
+      Serial.println("New white_level: " + String(white_level));
+    }
+
+    lastConfig = now;
+  }
+}
+
+
 void setup() {
   Serial.begin(115200);
 
@@ -202,11 +237,15 @@ void setup() {
   esp_task_wdt_init(WDT_TIMEOUT, true);  // enable panic so ESP32 restarts
   esp_task_wdt_add(NULL);                // add current thread to WDT watch
   BootReason = esp_reset_reason();
-  Serial.print("Boot reason:");
+  Serial.print("Boot reason: ");
   Serial.println(RESET_REASONS[BootReason]);
+
+  checkStatusConfig();
+
+  writeLEDs(REGULAR, true);
 }
 
-void writeLEDs(LedState state) {
+void writeLEDs(LedState state, bool goSlow) {
   switch (state) {
     case OFF:
       strip.clear();
@@ -246,6 +285,10 @@ void writeLEDs(LedState state) {
         } else {
           strip.setPixelColor(i, white_level, white_level, white_level);  //  Set pixel's color (in RAM)
         }
+        if (goSlow) {
+          strip.show();
+          delay(50);
+        }
       }
       strip.show();  //  Update strip to match
                      //  Pause for a moment
@@ -261,45 +304,6 @@ void writeLEDs(LedState state) {
   }
 }
 
-void checkStatusConfig() {
-  unsigned long now = millis();
-
-  if (lastStatus == 0 || now > lastStatus + statusInterval) {
-    APIPostStatus(sensor_id);
-    lastStatus = now;
-  }
-
-  if (lastConfig == 0 || now > lastConfig + configInterval) {
-    APIConfig config = APIGetConfig();
-    if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
-      hit_thresh = config.threshold;
-      hit_thresh_sq = hit_thresh * hit_thresh;
-      Serial.println("New threshold: " + String(hit_thresh));
-    }
-
-    if (config.hit_wait_is_set) {
-      hit_wait = config.hit_wait;
-      Serial.println("New hit_wait: " + String(hit_wait));
-    }
-
-    if (config.hit_flash_is_set) {
-      hit_flash = config.hit_flash;
-      Serial.println("New hit_flash: " + String(hit_flash));
-    }
-
-    if (config.blink_interval_is_set) {
-      blink_interval = config.blink_interval;
-      Serial.println("New hit_flash: " + String(blink_interval));
-    }
-
-    if (config.white_level_is_set) {
-      white_level = config.white_level;
-      Serial.println("New white_level: " + String(white_level));
-    }
-
-    lastConfig = now;
-  }
-}
 
 void debugInfo(float magnitude_sq, sensors_vec_t a) {
   Serial.print("M: ");
