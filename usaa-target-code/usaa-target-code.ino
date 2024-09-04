@@ -26,7 +26,7 @@
 
 const String TAG = "rev_7";
 
-#define WDT_TIMEOUT 120  // define a 1 minute WDT (Watch Dog Timer)
+#define WDT_TIMEOUT_S 120  // define a 2 minute WDT (Watch Dog Timer)
 
 // 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
 // see: https://github.com/espressif/esp-idf/blob/272b4091f1f1ff169c84a4ee6b67ded4a005a8a7/components/esp_system/include/esp_system.h#L38
@@ -44,7 +44,7 @@ float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
 uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
-uint32_t hit_flash = 5000;  // How long to strobe LEDs in ms
+uint32_t hit_flash = 2500;  // How long to strobe LEDs in ms
 uint8_t white_level = 100;
 uint16_t blink_interval = 200;
 
@@ -58,8 +58,8 @@ const uint8_t LED_SPLIT = 18;
 
 
 uint8_t sensor_id;
-IPAddress ip(192, 168, 77, 21);
-const IPAddress gw(192, 168, 77, 1);
+IPAddress ip(192, 168, 0, 21);
+const IPAddress gw(192, 168, 0, 1);
 const IPAddress subnet(255, 255, 255, 0);
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -154,7 +154,7 @@ void setupNetwork() {
 
   uint8_t* mac = (uint8_t*)&chipid;
   sensor_id = (calcCRC8(mac, 8) & 0x7f) + 20;
-  ip = IPAddress(192, 168, 77, sensor_id);
+  ip = IPAddress(192, 168, 0, sensor_id);
   APIUpdateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
@@ -234,8 +234,12 @@ void setup() {
   setupSensor();
   setupNetwork();
 
-  esp_task_wdt_init(WDT_TIMEOUT, true);  // enable panic so ESP32 restarts
-  esp_task_wdt_add(NULL);                // add current thread to WDT watch
+  esp_task_wdt_config_t _wdtConfig = {
+    .timeout_ms = WDT_TIMEOUT_S * 1000,   // set timeout to 2 minutes
+    .trigger_panic = true,                // enable panic so ESP32 restarts
+  };
+  esp_task_wdt_init(&_wdtConfig);
+  esp_task_wdt_add(NULL);         // add current thread to WDT watch
   BootReason = esp_reset_reason();
   Serial.print("Boot reason: ");
   Serial.println(RESET_REASONS[BootReason]);
@@ -358,11 +362,11 @@ void loop() {
   }
 
   if (!eth_connected)
-    writeLEDs(DISCONNECTED);
+    writeLEDs(DISCONNECTED, false);
   else if (isHit)
-    writeLEDs(HIT);
+    writeLEDs(HIT, false);
   else
-    writeLEDs(REGULAR);
+    writeLEDs(REGULAR, true);
 
   delay(5);
 }

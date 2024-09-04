@@ -5,9 +5,9 @@
 
 #include "usaa_api.h"
 
-const char* hitUrlBase = "http://192.168.77.11:5300/api/sensor/";
-const char* statusUrlBase = "http://192.168.77.11:5300/api/sensor/status/";
-const char* configUrlBase = "http://192.168.77.11:5300/api/sensor/config/";
+const char* hitUrlBase = "http://192.168.0.2:5300/api/sensor/";
+const char* statusUrlBase = "http://192.168.0.2:5300/api/sensor/status/";
+const char* configUrlBase = "http://192.168.0.2:5300/api/sensor/config/";
 
 String hitUrl;
 String statusUrl;
