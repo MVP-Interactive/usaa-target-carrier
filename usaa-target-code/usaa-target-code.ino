@@ -174,7 +174,7 @@ void checkStatusConfig() {
     if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
       hit_thresh = config.threshold;
       hit_thresh_sq = hit_thresh * hit_thresh;
-      Serial.println("New threshold: " + String(hit_thresh));
+      Serial.println("New hit_thresh: " + String(hit_thresh));
     }
 
     if (config.hit_wait_is_set) {

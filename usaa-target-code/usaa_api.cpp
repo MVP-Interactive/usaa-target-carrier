@@ -119,7 +119,7 @@ APIConfig APIGetConfig() {
     }
     if (doc.containsKey("threshold")) {
       float t = doc["threshold"].as<float>();
-      Serial.println("T: " + String(t));
+      Serial.println("threshold: " + String(t));
       ret_val.threshold = t;
       ret_val.threshold_is_set = true;
       semi_success = true;
@@ -128,7 +128,7 @@ APIConfig APIGetConfig() {
 
     if (doc.containsKey("hit_wait")) {
       float t = doc["hit_wait"].as<uint32_t>();
-      Serial.println("T: " + String(t));
+      Serial.println("hit_wait: " + String(t));
       ret_val.hit_wait = t;
       ret_val.hit_wait_is_set = true;
       semi_success = true;
@@ -137,7 +137,7 @@ APIConfig APIGetConfig() {
 
     if (doc.containsKey("hit_flash")) {
       float t = doc["hit_flash"].as<uint32_t>();
-      Serial.println("T: " + String(t));
+      Serial.println("hit_flash: " + String(t));
       ret_val.hit_flash = t;
       ret_val.hit_flash_is_set = true;
       semi_success = true;
@@ -146,7 +146,7 @@ APIConfig APIGetConfig() {
 
     if (doc.containsKey("white_level")) {
       float t = doc["white_level"].as<uint8_t>();
-      Serial.println("T: " + String(t));
+      Serial.println("white_level: " + String(t));
       ret_val.white_level = t;
       ret_val.white_level_is_set = true;
       semi_success = true;
@@ -155,7 +155,7 @@ APIConfig APIGetConfig() {
 
     if (doc.containsKey("blink_interval")) {
       float t = doc["blink_interval"].as<uint32_t>();
-      Serial.println("T: " + String(t));
+      Serial.println("blink_interval: " + String(t));
       ret_val.blink_interval = t;
       ret_val.blink_interval_is_set = true;
       semi_success = true;
