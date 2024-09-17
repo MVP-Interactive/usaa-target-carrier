@@ -23,7 +23,7 @@
 #include "usaa_api.h"
 #include "leds.h"
 
-const String TAG = "rev_7";
+const String TAG = "rev_8";
 const float MIN_DEBUG_MAG = 105;
 
 #define WDT_TIMEOUT_S 120  // define a 2 minute WDT (Watch Dog Timer)
