@@ -9,7 +9,6 @@
 #include <Client.h>
 #include <ETH.h>
 
-#include <esp_task_wdt.h>
 #include "esp_system.h"
 
 #include <Adafruit_LSM9DS1.h>
@@ -234,16 +233,6 @@ void setup() {
   setupSensor();
   setupNetwork();
 
-  esp_task_wdt_config_t _wdtConfig = {
-    .timeout_ms = WDT_TIMEOUT_S * 1000,   // set timeout to 2 minutes
-    .trigger_panic = true,                // enable panic so ESP32 restarts
-  };
-  esp_task_wdt_init(&_wdtConfig);
-  esp_task_wdt_add(NULL);         // add current thread to WDT watch
-  BootReason = esp_reset_reason();
-  Serial.print("Boot reason: ");
-  Serial.println(RESET_REASONS[BootReason]);
-
   checkStatusConfig();
 
   writeLEDs(REGULAR, true);
@@ -323,8 +312,6 @@ void debugInfo(float magnitude_sq, sensors_vec_t a) {
 }
 
 void loop() {
-  esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
-
   checkStatusConfig();
 
   lsm.read(); /* ask it to read in the data */
