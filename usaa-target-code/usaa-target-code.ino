@@ -18,7 +18,7 @@
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <CircularBuffer.h>
+#include <CircularBuffer.hpp>
 #include <CRC.h>
 
 #include "usaa_api.h"
