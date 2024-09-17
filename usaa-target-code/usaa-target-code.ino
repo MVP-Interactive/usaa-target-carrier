@@ -24,6 +24,7 @@
 #include "leds.h"
 
 const String TAG = "rev_7";
+const float MIN_DEBUG_MAG = 105;
 
 #define WDT_TIMEOUT_S 120  // define a 2 minute WDT (Watch Dog Timer)
 
@@ -36,14 +37,15 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-uint8_t hit_thresh = 19;
+// Default threshold to something close to what is normally used
+float hit_thresh = 10.5;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
-uint32_t hit_flash = 2500;  // How long to strobe LEDs in ms
+uint32_t hit_wait = 1000;   // How long to enforce no hits after a hit, in ms
+uint32_t hit_flash = 2000;  // How long to strobe LEDs in ms
 uint8_t white_level = 100;
 uint16_t blink_interval = 200;
 
@@ -327,7 +329,7 @@ void loop() {
   sample_history.push(magnitude_sq);
 
   // 1 Gravity Squared is 96.04
-  if (magnitude_sq > 110) {
+  if (magnitude_sq > MIN_DEBUG_MAG) {
     debugInfo(magnitude_sq, a.acceleration);
   }
 
@@ -336,7 +338,7 @@ void loop() {
 
   if (lastHit && now < lastHit + hit_wait) {
     isHit = true;
-  } else if (magnitude_sq > hit_thresh_sq) {
+  } else if (magnitude_sq >= hit_thresh_sq) {
     isHit = true;
     lastHit = now;
     if (eth_connected) {
