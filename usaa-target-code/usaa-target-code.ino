@@ -17,7 +17,6 @@
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <CircularBuffer.hpp>
 #include <CRC.h>
 
 #include "usaa_api.h"
@@ -67,8 +66,6 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // i2c
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
-
-CircularBuffer<float, 2000> sample_history;
 
 long long lastStatus = 0;  // ms
 long long lastConfig = 0;
@@ -326,7 +323,6 @@ void loop() {
   float magnitude_sq = a.acceleration.x * a.acceleration.x
                        + a.acceleration.y * a.acceleration.y
                        + a.acceleration.z * a.acceleration.z;
-  sample_history.push(magnitude_sq);
 
   // 1 Gravity Squared is 96.04
   if (magnitude_sq > MIN_DEBUG_MAG) {
