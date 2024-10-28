@@ -43,7 +43,7 @@ float hit_thresh = 10.5;
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hit_wait = 1000;   // How long to enforce no hits after a hit, in ms
+uint32_t hit_wait = 2100;   // How long to enforce no hits after a hit, in ms
 uint32_t hit_flash = 2000;  // How long to strobe LEDs in ms
 uint8_t white_level = 100;
 uint16_t blink_interval = 200;
@@ -333,7 +333,7 @@ void loop() {
   long long now = millis();
 
   if (lastHit && now < lastHit + hit_wait) {
-    isHit = true;
+    isHit = false;
   } else if (magnitude_sq >= hit_thresh_sq) {
     isHit = true;
     lastHit = now;
