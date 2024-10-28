@@ -168,7 +168,7 @@ void checkStatusConfig() {
 
   if (lastConfig == 0 || now > lastConfig + configInterval) {
     APIConfig config = APIGetConfig();
-    if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
+    if (config.threshold_is_set && config.threshold >= 1) {  // No way a threshhold of less than 1g is valid
       hit_thresh = config.threshold;
       hit_thresh_sq = hit_thresh * hit_thresh;
       Serial.println("New hit_thresh: " + String(hit_thresh));
@@ -325,7 +325,7 @@ void loop() {
                        + a.acceleration.z * a.acceleration.z;
 
   // 1 Gravity Squared is 96.04
-  if (magnitude_sq > MIN_DEBUG_MAG) {
+  if (magnitude_sq >= MIN_DEBUG_MAG) {
     debugInfo(magnitude_sq, a.acceleration);
   }
 
