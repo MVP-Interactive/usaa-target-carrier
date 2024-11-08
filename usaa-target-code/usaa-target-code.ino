@@ -9,7 +9,6 @@
 #include <Client.h>
 #include <ETH.h>
 
-#include <esp_task_wdt.h>
 #include "esp_system.h"
 
 #include <Adafruit_LSM9DS1.h>
@@ -18,15 +17,17 @@
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <CircularBuffer.h>
 #include <CRC.h>
 
+#include "sensor_calibration.h"
 #include "usaa_api.h"
 #include "leds.h"
 
-const String TAG = "rev_7";
+const String TAG = "rev_8";
+const float MIN_CONFIG_MAG = 0.01;  // smallest value we want to accept for a threshold
+const float MIN_DEBUG_MAG = 0.25;   // smallest value we want to debug
 
-#define WDT_TIMEOUT 120  // define a 1 minute WDT (Watch Dog Timer)
+#define WDT_TIMEOUT_S 120  // define a 2 minute WDT (Watch Dog Timer)
 
 // 99 is invalid.  1 is normal power on. 6 is task watchdog. For others
 // see: https://github.com/espressif/esp-idf/blob/272b4091f1f1ff169c84a4ee6b67ded4a005a8a7/components/esp_system/include/esp_system.h#L38
@@ -37,14 +38,15 @@ enum HTTPMsg {
   HTTP_STATUS,
   HTTP_CFG
 };
-uint8_t hit_thresh = 19;
+// Default threshold to something close to what is normally used
+float hit_thresh = 1.0;
 // We don't want to do the sqrt part of the magnitudes, so we square the value to
 // compare against.
 float hit_thresh_sq = hit_thresh * hit_thresh;
 
 long long lastHit = 0;
-uint32_t hit_wait = 500;    //How long to enforce no hits after a hit, in ms
-uint32_t hit_flash = 5000;  // How long to strobe LEDs in ms
+uint32_t hit_wait = 1000;   // How long to enforce no hits after a hit, in ms
+uint32_t hit_flash = 1000;  // How long to strobe LEDs in ms
 uint8_t white_level = 100;
 uint16_t blink_interval = 200;
 
@@ -58,8 +60,8 @@ const uint8_t LED_SPLIT = 18;
 
 
 uint8_t sensor_id;
-IPAddress ip(192, 168, 77, 21);
-const IPAddress gw(192, 168, 77, 1);
+IPAddress ip(192, 168, 0, 21);
+const IPAddress gw(192, 168, 0, 1);
 const IPAddress subnet(255, 255, 255, 0);
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -67,10 +69,10 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // i2c
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
-CircularBuffer<float, 2000> sample_history;
-
 long long lastStatus = 0;  // ms
 long long lastConfig = 0;
+sensors_vec_t zeroedAccel;
+bool calibrationNeeded = false;
 
 const uint32_t statusInterval = 60000;  // ms
 const uint32_t configInterval = 60000;
@@ -154,7 +156,7 @@ void setupNetwork() {
 
   uint8_t* mac = (uint8_t*)&chipid;
   sensor_id = (calcCRC8(mac, 8) & 0x7f) + 20;
-  ip = IPAddress(192, 168, 77, sensor_id);
+  ip = IPAddress(192, 168, 0, sensor_id);
   APIUpdateUrls(sensor_id);
 
   ETH.config(ip, gw, subnet, gw, gw);
@@ -170,10 +172,10 @@ void checkStatusConfig() {
 
   if (lastConfig == 0 || now > lastConfig + configInterval) {
     APIConfig config = APIGetConfig();
-    if (config.threshold_is_set && config.threshold > 1) {  // No way a threshhold of less than 1g is valid
+    if (config.threshold_is_set && config.threshold >= MIN_CONFIG_MAG) {
       hit_thresh = config.threshold;
       hit_thresh_sq = hit_thresh * hit_thresh;
-      Serial.println("New threshold: " + String(hit_thresh));
+      Serial.println("New hit_thresh: " + String(hit_thresh));
     }
 
     if (config.hit_wait_is_set) {
@@ -234,15 +236,11 @@ void setup() {
   setupSensor();
   setupNetwork();
 
-  esp_task_wdt_init(WDT_TIMEOUT, true);  // enable panic so ESP32 restarts
-  esp_task_wdt_add(NULL);                // add current thread to WDT watch
-  BootReason = esp_reset_reason();
-  Serial.print("Boot reason: ");
-  Serial.println(RESET_REASONS[BootReason]);
-
   checkStatusConfig();
 
   writeLEDs(REGULAR, true);
+
+  calibrateSensor(&lsm, &zeroedAccel);
 }
 
 void writeLEDs(LedState state, bool goSlow) {
@@ -304,52 +302,41 @@ void writeLEDs(LedState state, bool goSlow) {
   }
 }
 
-
-void debugInfo(float magnitude_sq, sensors_vec_t a) {
-  Serial.print("M: ");
+void debugInfo(float magnitude_sq, sensors_vec_t a, sensors_vec_t delta) {
+  Serial.print("MagSqr: ");
   Serial.print(magnitude_sq);
-  Serial.print(", HT: ");
+  Serial.print(", HitThreshold: ");
   Serial.print(hit_thresh_sq);
-  Serial.print(", A_X: ");
-  Serial.print(a.x);
-  Serial.print(", A_Y: ");
-  Serial.print(a.y);
-  Serial.print(", A_Z: ");
-  Serial.println(a.z);
+
+  // print accelerometer values
+  Serial.printf(", Accel X: %.2f, Y: %.2f, Z: %.2f\n", a.x, a.y, a.z);
+
+  // print deltas
+  Serial.printf("Deltas - X: %.2f, Y: %.2f, Z: %.2f\n", delta.x, delta.y, delta.z);
 }
 
 void loop() {
-  esp_task_wdt_reset();  // Added to repeatedly reset the Watch Dog Timer
-
   checkStatusConfig();
 
-  lsm.read(); /* ask it to read in the data */
+  sensors_vec_t accel;
+  sensors_vec_t delta;
+  float magnitude_sq = calculateMagnitude(&lsm, &accel, &delta, &zeroedAccel);
 
-  /* Get a new sensor event */
-  sensors_event_t a, m, g, temp;
-
-  lsm.getEvent(&a, &m, &g, &temp);
-
-  float magnitude_sq = a.acceleration.x * a.acceleration.x
-                       + a.acceleration.y * a.acceleration.y
-                       + a.acceleration.z * a.acceleration.z;
-  sample_history.push(magnitude_sq);
-
-  // 1 Gravity Squared is 96.04
-  if (magnitude_sq > 110) {
-    debugInfo(magnitude_sq, a.acceleration);
+  if (magnitude_sq >= MIN_DEBUG_MAG) {
+    debugInfo(magnitude_sq, accel, delta);
   }
 
   bool isHit = false;
   long long now = millis();
 
   if (lastHit && now < lastHit + hit_wait) {
-    isHit = true;
-  } else if (magnitude_sq > hit_thresh_sq) {
+    isHit = false;
+  } else if (!calibrationNeeded && magnitude_sq >= hit_thresh_sq) {
     isHit = true;
     lastHit = now;
     if (eth_connected) {
       APIPostHit();
+      calibrationNeeded = true;
     }
   }
 
@@ -358,11 +345,14 @@ void loop() {
   }
 
   if (!eth_connected)
-    writeLEDs(DISCONNECTED);
+    writeLEDs(DISCONNECTED, false);
   else if (isHit)
-    writeLEDs(HIT);
+    writeLEDs(HIT, false);
   else
-    writeLEDs(REGULAR);
+    writeLEDs(REGULAR, true);
 
-  delay(5);
+  if (calibrationNeeded && now > lastHit + hit_wait) {
+    calibrateSensor(&lsm, &zeroedAccel);
+    calibrationNeeded = false;
+  }
 }
